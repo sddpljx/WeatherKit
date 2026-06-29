@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@main
         with:
           submodules: recursive
-          token: ${{ secrets.SUBMODULE_TOKEN }}
+          token: ${{ secrets.SUBMODULE_TOKEN || github.token }}
       - name: Set up Node.js
         uses: actions/setup-node@main
         with:
@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: npm install
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_TOKEN || github.token }}
       - name: Update local package.json version from release tag
         if: github.ref_type == 'tag'
         uses: BellCubeDev/update-package-version-by-release-tag@v2

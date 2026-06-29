@@ -845,7 +845,7 @@ export default class AirQuality {
             HJ6332012: {
                 weatherKitScale: {
                     name: "HJ6332012",
-                    version: "2414",
+                    version: "2604",
                 },
                 categories: {
                     significantIndex: 3, // 轻度污染

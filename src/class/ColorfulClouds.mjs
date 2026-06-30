@@ -4,11 +4,23 @@ import AirQuality from "./AirQuality.mjs";
 import ForecastNextHour from "./ForecastNextHour.mjs";
 import providerNameToLogo from "../function/providerNameToLogo.mjs";
 
+const DEFAULT_TOKEN = "Y2FpeXVuX25vdGlmeQ==";
+
+function normalizeToken(token) {
+    if (typeof token !== "string") return DEFAULT_TOKEN;
+
+    const trimmedToken = token.trim();
+    if (!trimmedToken || trimmedToken === `""` || trimmedToken === `''`) return DEFAULT_TOKEN;
+
+    return trimmedToken.replace(/^["']|["']$/g, "") || DEFAULT_TOKEN;
+}
+
 export default class ColorfulClouds {
     constructor(parameters, token) {
         this.Name = "ColorfulClouds";
         this.Version = "4.1.0";
         Console.log(`🟧 ${this.Name} v${this.Version}`);
+        token = normalizeToken(token);
         this.endpoint = `https://api.caiyunapp.com/v2.6/${token}/${parameters.longitude},${parameters.latitude}`;
         this.headers = { Referer: "https://caiyunapp.com/" };
         this.version = parameters.version;

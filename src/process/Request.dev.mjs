@@ -107,6 +107,16 @@ export async function Request($request) {
                             }
                             break;
                         }
+                        case url.pathname.startsWith("/api/v1/airQualityScale/"): {
+                            const segments = url.pathname.split("/");
+                            const lastSegment = segments[segments.length - 1];
+                            const dotIndex = lastSegment?.lastIndexOf(".");
+                            if (dotIndex !== -1) {
+                                segments[segments.length - 1] = lastSegment.substring(0, dotIndex);
+                                url.pathname = segments.join("/");
+                            }
+                            break;
+                        }
                     }
                     break;
                 case "weather-map2.apple.com": {

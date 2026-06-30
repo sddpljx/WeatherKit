@@ -1,6 +1,7 @@
 import { defineConfig } from "@rspack/cli";
 import rspack from "@rspack/core";
 import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
+import { fileURLToPath } from "node:url";
 import pkg from "./package.json" with { type: "json" };
 
 export default defineConfig({
@@ -13,6 +14,12 @@ export default defineConfig({
         filename: "[name].bundle.js",
         library: {
             type: "module",
+        },
+    },
+    resolve: {
+        alias: {
+            "@nsnanocat/util$": fileURLToPath(new URL("./src/vendor/nsnanocat-util/index.mjs", import.meta.url)),
+            "@nsnanocat/util/getStorage.mjs$": fileURLToPath(new URL("./src/vendor/nsnanocat-util/getStorage.mjs", import.meta.url)),
         },
     },
     plugins: [

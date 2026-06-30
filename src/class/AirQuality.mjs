@@ -325,13 +325,64 @@ export default class AirQuality {
         }
     }
 
-    static ToWeatherKitScale = ({ name, version }) => `${name}.${version}`;
+    static ToWeatherKitScale({ name, version }, referenceScale) {
+        const scaleVersion = referenceScale ? (AirQuality.GetVersionFromScale(referenceScale) ?? version) : version;
+        return scaleVersion ? `${name}.${scaleVersion}` : name;
+    }
+
+    static GetVersionFromScale(scale) {
+        Console.info("☑️ GetVersionFromScale", `scale: ${scale}`);
+
+        const lastDotIndex = scale?.lastIndexOf(".");
+        if (!scale) {
+            Console.error("GetVersionFromScale", `无法找到${scale}的版本号`);
+            return undefined;
+        }
+        if (lastDotIndex === -1) {
+            Console.info("✅ GetVersionFromScale", "No version.");
+            return undefined;
+        }
+
+        const scaleVersion = scale.substring(lastDotIndex + 1);
+        Console.info("✅ GetVersionFromScale", `scaleVersion: ${scaleVersion}`);
+        return scaleVersion;
+    }
+
+    static InheritScaleVersion(airQuality, referenceScale) {
+        Console.info("☑️ InheritScaleVersion", `referenceScale: ${referenceScale}`);
+
+        if (!airQuality?.scale) {
+            Console.info("✅ InheritScaleVersion", "No scale to inherit.");
+            return airQuality;
+        }
+
+        if (!referenceScale) {
+            Console.info("✅ InheritScaleVersion", "No reference scale.");
+            return airQuality;
+        }
+
+        const scaleName = AirQuality.GetNameFromScale(airQuality.scale);
+        const referenceVersion = AirQuality.GetVersionFromScale(referenceScale);
+        if (!referenceVersion) {
+            Console.info("✅ InheritScaleVersion", "No reference version.");
+            return airQuality;
+        }
+
+        const scale = AirQuality.ToWeatherKitScale({ name: scaleName, version: referenceVersion });
+        Console.info("✅ InheritScaleVersion", `scale: ${scale}`);
+        return { ...airQuality, scale };
+    }
+
     static GetNameFromScale(scale) {
         Console.info("☑️ GetNameFromScale", `scale: ${scale}`);
 
         const lastDotIndex = scale?.lastIndexOf(".");
-        if (!scale || lastDotIndex === -1) {
+        if (!scale) {
             Console.error("GetNameFromScale", `无法找到${scale}的版本号`);
+            return scale;
+        }
+        if (lastDotIndex === -1) {
+            Console.info("✅ GetNameFromScale", `scaleName: ${scale}`);
             return scale;
         }
 
@@ -570,7 +621,7 @@ export default class AirQuality {
      * - amount 的物理单位由每个元素的 units 字段决定（如 µg/m³、mg/m³、ppb、ppm）。
      *
      * @param {{
-     *   weatherKitScale: {name: string, version: string, maxIndex?: number},
+     *   weatherKitScale: {name: string, version?: string, maxIndex?: number},
      *   pollutants: Record<string, {units: string, stpConversionFactor?: number, ranges: any}>,
      *   categories: {significantIndex: number, ranges: Array<{categoryIndex: number, indexes: number[]}>}
      * }} scale
@@ -845,7 +896,6 @@ export default class AirQuality {
             HJ6332012: {
                 weatherKitScale: {
                     name: "HJ6332012",
-                    version: "2604",
                 },
                 categories: {
                     significantIndex: 3, // 轻度污染
@@ -1035,7 +1085,6 @@ export default class AirQuality {
             HJ6332025_DRAFT: {
                 weatherKitScale: {
                     name: "HJ6332012",
-                    version: "2414",
                 },
                 categories: {
                     significantIndex: 3, // 轻度污染
@@ -1517,7 +1566,6 @@ export default class AirQuality {
             WAQI_InstantCast_CN: {
                 weatherKitScale: {
                     name: "HJ6332012",
-                    version: "2414",
                     maxIndex: 500,
                 },
                 categories: {
@@ -1645,7 +1693,6 @@ export default class AirQuality {
             WAQI_InstantCast_CN_25_DRAFT: {
                 weatherKitScale: {
                     name: "HJ6332012",
-                    version: "2414",
                     maxIndex: 500,
                 },
                 categories: {

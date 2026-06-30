@@ -320,23 +320,24 @@ async function InjectAirQuality(airQuality, Settings, Caches, enviroments) {
     // Step3. 根据污染物补齐情况与替换配置，决定是否注入 AQI 指数
     const needInjectIndex = needPollutants || Settings?.AirQuality?.Current?.Index?.Replace?.includes(AirQuality.GetNameFromScale(airQuality?.scale));
     const injectedIndex = needInjectIndex ? await InjectIndex(injectedPollutants, Settings, enviroments) : injectedPollutants;
+    const versionedInjectedIndex = needInjectIndex ? AirQuality.InheritScaleVersion(injectedIndex, airQuality?.scale) : injectedIndex;
 
     // Step4. 计算昨日对比是否需要重算；若未知则注入昨日对比结果
     const weatherKitComparison = airQuality?.previousDayComparison ?? AirQuality.Config.CompareCategoryIndexes.UNKNOWN;
     const previousDayComparison = needInjectIndex && Settings?.AirQuality?.Comparison?.ReplaceWhenCurrentChange ? AirQuality.Config.CompareCategoryIndexes.UNKNOWN : weatherKitComparison;
     const needInjectComparison = previousDayComparison === AirQuality.Config.CompareCategoryIndexes.UNKNOWN;
     const currentIndexProvider = needInjectIndex ? Settings?.AirQuality?.Current?.Index?.Provider : "WeatherKit";
-    const injectedComparison = needInjectComparison ? await InjectComparison(injectedIndex, currentIndexProvider, Settings, Caches, enviroments) : { ...injectedIndex, previousDayComparison: weatherKitComparison };
+    const injectedComparison = needInjectComparison ? await InjectComparison(versionedInjectedIndex, currentIndexProvider, Settings, Caches, enviroments) : { ...versionedInjectedIndex, previousDayComparison: weatherKitComparison };
 
     // Step5. 收集各阶段元数据，拼接最终 providerName 展示文案
     const weatherKitMetadata = airQuality?.metadata;
     const pollutantMetadata = injectedPollutants?.metadata;
-    const indexMetadata = injectedIndex?.metadata;
+    const indexMetadata = versionedInjectedIndex?.metadata;
     const comparisonMetadata = injectedComparison?.metadata;
     const providers = [
         ...(weatherKitMetadata?.providerName && !weatherKitMetadata.temporarilyUnavailable ? [weatherKitMetadata.providerName] : []),
         ...(needPollutants && pollutantMetadata?.providerName && !pollutantMetadata.temporarilyUnavailable ? [`污染物：${pollutantMetadata.providerName}`] : []),
-        ...(needInjectIndex && indexMetadata?.providerName && !indexMetadata.temporarilyUnavailable ? [`指数：${AirQuality.appendScaleToProviderName(injectedIndex, Settings)}`] : []),
+        ...(needInjectIndex && indexMetadata?.providerName && !indexMetadata.temporarilyUnavailable ? [`指数：${AirQuality.appendScaleToProviderName(versionedInjectedIndex, Settings)}`] : []),
         ...(needInjectComparison && comparisonMetadata?.providerName && !comparisonMetadata.temporarilyUnavailable ? [`对比昨日：\n${comparisonMetadata.providerName}`] : []),
     ];
 
@@ -346,13 +347,13 @@ async function InjectAirQuality(airQuality, Settings, Caches, enviroments) {
     // Step7. 合并输出：优先使用可用注入结果，并统一 metadata / pollutants / previousDayComparison
     airQuality = {
         ...airQuality,
-        ...(injectedIndex?.metadata && !injectedIndex.metadata.temporarilyUnavailable ? injectedIndex : {}),
+        ...(versionedInjectedIndex?.metadata && !versionedInjectedIndex.metadata.temporarilyUnavailable ? versionedInjectedIndex : {}),
         metadata: {
             ...(airQuality?.metadata ? airQuality.metadata : injectedPollutants?.metadata),
             providerName: providers.join("\n"),
             ...(firstValidProvider ? { providerLogo: providerNameToLogo(firstValidProvider, "v2") } : {}),
         },
-        pollutants: AirQuality.ConvertPollutants(airQuality, injectedPollutants, needInjectIndex, injectedIndex, Settings) ?? [],
+        pollutants: AirQuality.ConvertPollutants(airQuality, injectedPollutants, needInjectIndex, versionedInjectedIndex, Settings) ?? [],
         previousDayComparison: injectedComparison?.previousDayComparison ?? AirQuality.Config.CompareCategoryIndexes.UNKNOWN,
     };
     Console.debug(`airQuality: ${JSON.stringify(airQuality, null, 2)}`);

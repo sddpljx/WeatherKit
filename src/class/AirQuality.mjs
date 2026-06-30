@@ -172,7 +172,7 @@ export default class AirQuality {
 
     static Pollutants2AQI(airQuality, Settings, options = {}) {
         Console.info("☑️ Pollutants2AQI");
-        const algorithm = options?.algorithm ?? Settings?.AirQuality?.Calculate?.Algorithm;
+        const algorithm = AirQuality.NormalizeAlgorithm(options?.algorithm ?? Settings?.AirQuality?.Calculate?.Algorithm);
         const forcePrimaryPollutant = options?.forcePrimaryPollutant ?? Settings?.AirQuality?.Current?.Index?.ForceCNPrimaryPollutants;
         const allowOverRange = options?.allowOverRange ?? Settings?.AirQuality?.Calculate?.AllowOverRange;
 
@@ -361,16 +361,61 @@ export default class AirQuality {
             return airQuality;
         }
 
-        const scaleName = AirQuality.GetNameFromScale(airQuality.scale);
         const referenceVersion = AirQuality.GetVersionFromScale(referenceScale);
         if (!referenceVersion) {
             Console.info("✅ InheritScaleVersion", "No reference version.");
             return airQuality;
         }
 
-        const scale = AirQuality.ToWeatherKitScale({ name: scaleName, version: referenceVersion });
-        Console.info("✅ InheritScaleVersion", `scale: ${scale}`);
+        const versionedAirQuality = AirQuality.SetScaleVersion(airQuality, referenceVersion);
+        Console.info("✅ InheritScaleVersion", `scale: ${versionedAirQuality?.scale}`);
+        return versionedAirQuality;
+    }
+
+    static SetScaleVersion(airQuality, scaleVersion) {
+        Console.info("☑️ SetScaleVersion", `scaleVersion: ${scaleVersion}`);
+
+        if (!airQuality?.scale || !scaleVersion) {
+            Console.info("✅ SetScaleVersion", "No scale version to set.");
+            return airQuality;
+        }
+
+        const scaleName = AirQuality.GetNameFromScale(airQuality.scale);
+        const scale = AirQuality.ToWeatherKitScale({ name: scaleName, version: scaleVersion });
+        Console.info("✅ SetScaleVersion", `scale: ${scale}`);
         return { ...airQuality, scale };
+    }
+
+    static NormalizeAlgorithm(algorithm) {
+        Console.info("☑️ NormalizeAlgorithm", `algorithm: ${algorithm}`);
+
+        switch (algorithm) {
+            case "None":
+            case "UBA":
+            case "EU_EAQI":
+            case "WAQI_InstantCast_US":
+            case "WAQI_InstantCast_CN":
+            case "WAQI_InstantCast_CN_25_DRAFT": {
+                Console.info("✅ NormalizeAlgorithm", `algorithm: ${algorithm}`);
+                return algorithm;
+            }
+            case "EU.EAQI": {
+                Console.info("✅ NormalizeAlgorithm", "algorithm: EU_EAQI");
+                return "EU_EAQI";
+            }
+            case "EPA_NowCast": {
+                Console.info("✅ NormalizeAlgorithm", "algorithm: WAQI_InstantCast_US");
+                return "WAQI_InstantCast_US";
+            }
+            case "HJ6332012": {
+                Console.info("✅ NormalizeAlgorithm", "algorithm: WAQI_InstantCast_CN");
+                return "WAQI_InstantCast_CN";
+            }
+            default: {
+                Console.error("NormalizeAlgorithm", `Unsupported algorithm: ${algorithm}, fallback to UBA`);
+                return "UBA";
+            }
+        }
     }
 
     static GetNameFromScale(scale) {
@@ -405,8 +450,9 @@ export default class AirQuality {
 
         switch (Settings?.AirQuality?.Comparison?.Yesterday?.IndexProvider) {
             case "Calculate": {
-                Console.info("✅ chooseAlogrithm", `algorithm: ${Settings?.AirQuality?.Calculate?.Algorithm}`);
-                return Settings?.AirQuality?.Calculate?.Algorithm;
+                const algorithm = AirQuality.NormalizeAlgorithm(Settings?.AirQuality?.Calculate?.Algorithm);
+                Console.info("✅ chooseAlogrithm", `algorithm: ${algorithm}`);
+                return algorithm;
             }
             case "QWeather":
             case "ColorfulCloudsCN": {
@@ -426,8 +472,9 @@ export default class AirQuality {
                 } else {
                     const supportedScales = [scales.EU_EAQI.weatherKitScale.name, scales.UBA.weatherKitScale.name];
                     if (supportedScales.includes(currentScale)) {
-                        Console.info("✅ chooseAlogrithm", `algorithm: ${currentScale}`);
-                        return currentScale;
+                        const algorithm = AirQuality.NormalizeAlgorithm(currentScale);
+                        Console.info("✅ chooseAlogrithm", `algorithm: ${algorithm}`);
+                        return algorithm;
                     }
 
                     Console.error("chooseAlogrithm", "没有找到合适的内置算法");
@@ -693,7 +740,6 @@ export default class AirQuality {
             UBA: {
                 weatherKitScale: {
                     name: "UBA",
-                    version: "2414",
                 },
                 // Indexes below for calculation only, not for display
                 categories: {
@@ -791,7 +837,6 @@ export default class AirQuality {
             EU_EAQI: {
                 weatherKitScale: {
                     name: "EU.EAQI",
-                    version: "2414",
                     maxIndex: 60,
                 },
                 // Indexes below for calculation only, not for display
@@ -1280,7 +1325,6 @@ export default class AirQuality {
             EPA_NowCast: {
                 weatherKitScale: {
                     name: "EPA_NowCast",
-                    version: "2414",
                 },
                 categories: {
                     significantIndex: 3, // Unhealthy for Sensitive Groups
@@ -1437,7 +1481,6 @@ export default class AirQuality {
             WAQI_InstantCast_US: {
                 weatherKitScale: {
                     name: "EPA_NowCast",
-                    version: "2414",
                     maxIndex: 500,
                 },
                 categories: {

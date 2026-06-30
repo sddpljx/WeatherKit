@@ -10,6 +10,7 @@ import QWeather from "../class/QWeather.mjs";
 import WAQI from "../class/WAQI.mjs";
 import Weather from "../class/Weather.mjs";
 import AirQuality from "../class/AirQuality.mjs";
+import { cacheAirQualityScaleVersion, getAirQualityScaleVersionFromRequest, getCachedAirQualityScaleVersion } from "../function/airQualityScaleVersionCache.mjs";
 /***************** Processing *****************/
 export async function Response($request, $response) {
     // 解构URL
@@ -89,6 +90,7 @@ export async function Response($request, $response) {
                                     colorfulClouds: new ColorfulClouds(parameters, Settings?.API?.ColorfulClouds?.Token),
                                     qWeather: new QWeather(parameters, Settings?.API?.QWeather?.Token, Settings?.API?.QWeather?.Host),
                                     waqi: new WAQI(parameters, Settings?.API?.WAQI?.Token),
+                                    airQualityScaleVersion: getAirQualityScaleVersionFromRequest($request),
                                     country: parameters.country,
                                 };
 
@@ -311,6 +313,7 @@ async function InjectForecastNextHour(forecastNextHour, Settings, enviroments) {
 async function InjectAirQuality(airQuality, Settings, Caches, enviroments) {
     // Step1. 修复污染物单位
     airQuality = AirQuality.FixPollutantsUnits(airQuality);
+    const scaleVersion = enviroments?.airQualityScaleVersion ?? cacheAirQualityScaleVersion(Caches, airQuality?.scale) ?? getCachedAirQualityScaleVersion(Caches);
 
     // Step2. 判断原始污染物是否为空，并在需要时注入污染物数据
     const isPollutantEmpty = !Array.isArray(airQuality?.pollutants) || airQuality.pollutants.length === 0;
@@ -320,7 +323,7 @@ async function InjectAirQuality(airQuality, Settings, Caches, enviroments) {
     // Step3. 根据污染物补齐情况与替换配置，决定是否注入 AQI 指数
     const needInjectIndex = needPollutants || Settings?.AirQuality?.Current?.Index?.Replace?.includes(AirQuality.GetNameFromScale(airQuality?.scale));
     const injectedIndex = needInjectIndex ? await InjectIndex(injectedPollutants, Settings, enviroments) : injectedPollutants;
-    const versionedInjectedIndex = needInjectIndex ? AirQuality.InheritScaleVersion(injectedIndex, airQuality?.scale) : injectedIndex;
+    const versionedInjectedIndex = needInjectIndex ? AirQuality.SetScaleVersion(injectedIndex, scaleVersion) : injectedIndex;
 
     // Step4. 计算昨日对比是否需要重算；若未知则注入昨日对比结果
     const weatherKitComparison = airQuality?.previousDayComparison ?? AirQuality.Config.CompareCategoryIndexes.UNKNOWN;

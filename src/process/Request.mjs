@@ -1,6 +1,7 @@
 import { Console, Lodash as _, Storage } from "@nsnanocat/util";
 import database from "../function/database.mjs";
 import setENV from "../function/setENV.mjs";
+import { cacheAirQualityScaleVersion } from "../function/airQualityScaleVersionCache.mjs";
 /***************** Processing *****************/
 export async function Request($request) {
     // 构造回复数据
@@ -104,6 +105,11 @@ export async function Request($request) {
                                 dataSets = dataSets?.filter(dataSet => Settings.DataSets?.includes(dataSet));
                                 url.searchParams.set("dataSets", dataSets?.join(","));
                             }
+                            break;
+                        }
+                        case url.pathname.startsWith("/api/v1/airQualityScale/"): {
+                            const airQualityScale = url.pathname.split("/").filter(Boolean).at(-1);
+                            cacheAirQualityScaleVersion(Caches, airQualityScale);
                             break;
                         }
                     }

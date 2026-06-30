@@ -344,6 +344,7 @@ async function InjectAirQuality(airQuality, Settings, Caches, enviroments) {
     const firstValidProvider = weatherKitMetadata?.providerName || pollutantMetadata?.providerName || indexMetadata?.providerName || comparisonMetadata?.providerName;
 
     // Step7. 合并输出：优先使用可用注入结果，并统一 metadata / pollutants / previousDayComparison
+    const originalScale = airQuality?.scale;
     airQuality = {
         ...airQuality,
         ...(injectedIndex?.metadata && !injectedIndex.metadata.temporarilyUnavailable ? injectedIndex : {}),
@@ -355,6 +356,16 @@ async function InjectAirQuality(airQuality, Settings, Caches, enviroments) {
         pollutants: AirQuality.ConvertPollutants(airQuality, injectedPollutants, needInjectIndex, injectedIndex, Settings) ?? [],
         previousDayComparison: injectedComparison?.previousDayComparison ?? AirQuality.Config.CompareCategoryIndexes.UNKNOWN,
     };
+    if (originalScale && airQuality.scale) {
+        const originalName = AirQuality.GetNameFromScale(originalScale);
+        const currentName = AirQuality.GetNameFromScale(airQuality.scale);
+        if (originalName === currentName) {
+            airQuality.scale = AirQuality.ToWeatherKitScale({
+                name: currentName,
+                version: AirQuality.GetVersionFromScale(originalScale),
+            });
+        }
+    }
     Console.debug(`airQuality: ${JSON.stringify(airQuality, null, 2)}`);
     return airQuality;
 }

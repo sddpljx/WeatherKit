@@ -340,6 +340,12 @@ export default class AirQuality {
         return scaleName;
     }
 
+    static GetVersionFromScale(scale) {
+        const lastDotIndex = scale?.lastIndexOf(".");
+        if (!scale || lastDotIndex === -1) return undefined;
+        return scale.substring(lastDotIndex + 1);
+    }
+
     /**
      * 根据“昨日对比指数来源”和当前空气质量 scale，选择用于昨日对比计算的算法。
      * - Calculate: 直接采用用户配置算法
